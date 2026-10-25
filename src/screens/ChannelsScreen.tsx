@@ -2,10 +2,11 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { Plus, Search } from 'lucide-react';
 import clsx from 'clsx';
-import { logoUrl, useChannels, useCreateChannel, useGroups } from '../api/hooks';
-import { Badge, Button, Centered, ErrorNote, Field, Logo, Sheet, Spinner, TopBar } from '../components/ui';
+import { logoUrl, useChannels, useCreateChannel, useGroups, useSetProfileMembership } from '../api/hooks';
+import { Badge, Button, Centered, ErrorNote, Field, Logo, Sheet, Spinner, Toggle, TopBar } from '../components/ui';
 import { useToast } from '../components/Toast';
 import { useDebounced, useOnVisible } from '../lib/useDebounced';
+import { useSelectedProfile } from '../lib/useSelectedProfile';
 
 export default function ChannelsScreen() {
   // Search and group live in the URL so Back from a channel restores the list
@@ -14,6 +15,9 @@ export default function ChannelsScreen() {
   const group = params.get('group') ? Number(params.get('group')) : null;
   const debouncedSearch = useDebounced(search);
   const [creating, setCreating] = useState(false);
+  const { profiles, profile, members, select: selectProfile } = useSelectedProfile();
+  const setMembership = useSetProfileMembership();
+  const toast = useToast();
 
   const groups = useGroups();
   const selectedGroupName = group !== null ? (groups.data?.find((g) => g.id === group)?.name ?? null) : null;
@@ -43,11 +47,34 @@ export default function ChannelsScreen() {
     <>
       <TopBar
         title="Channels"
-        subtitle={total !== undefined ? `${total} channel${total === 1 ? '' : 's'}` : undefined}
+        subtitle={
+          total !== undefined
+            ? `${total} channel${total === 1 ? '' : 's'}${profile ? ` · ${profile.channels.length} in ${profile.name}` : ''}`
+            : undefined
+        }
         right={
-          <button aria-label="New channel" className="rounded-full p-2 text-accent" onClick={() => setCreating(true)}>
-            <Plus size={24} />
-          </button>
+          <>
+            {profiles.length > 0 && (
+              <label className="flex items-center gap-1 rounded-full bg-surface px-3 py-1.5 text-sm ring-1 ring-line">
+                <span className="sr-only">Profile shown on channel switches</span>
+                <select
+                  className="max-w-28 bg-transparent text-sm outline-none"
+                  value={profile?.id ?? 'none'}
+                  onChange={(e) => selectProfile(e.target.value === 'none' ? null : Number(e.target.value))}
+                >
+                  {profiles.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                  <option value="none">No profile</option>
+                </select>
+              </label>
+            )}
+            <button aria-label="New channel" className="rounded-full p-2 text-accent" onClick={() => setCreating(true)}>
+              <Plus size={24} />
+            </button>
+          </>
         }
       />
       <div className="sticky top-14 z-10 space-y-2 border-b border-line bg-bg px-3 py-2">
@@ -87,24 +114,40 @@ export default function ChannelsScreen() {
       ) : (
         <ul className="divide-y divide-line">
           {items.map((ch) => (
-            <li key={ch.id}>
-              <Link to={`/channels/${ch.id}`} className="flex items-center gap-3 px-3 py-2.5 active:bg-surface">
+            <li key={ch.id} className="flex items-center">
+              <Link to={`/channels/${ch.id}`} className="flex min-w-0 flex-1 items-center gap-3 py-2.5 pl-3 active:bg-surface">
                 <span className="w-10 shrink-0 text-right font-mono text-sm text-muted">{ch.channel_number ?? '–'}</span>
                 <Logo src={logoUrl(ch.logo_id)} alt={ch.name} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{ch.name}</p>
-                  <p className="truncate text-xs text-muted">
-                    {ch.channel_group_id ? groupName.get(ch.channel_group_id) : 'No group'}
+                  <p className="flex items-center gap-1.5 truncate text-xs text-muted">
+                    {ch.streams.length === 0 ? (
+                      <Badge tone="danger">No streams</Badge>
+                    ) : (
+                      <span className="shrink-0">
+                        {ch.streams.length} stream{ch.streams.length === 1 ? '' : 's'} ·
+                      </span>
+                    )}
+                    <span className="truncate">
+                      {ch.channel_group_id ? groupName.get(ch.channel_group_id) : 'No group'}
+                    </span>
                   </p>
                 </div>
-                {ch.streams.length === 0 ? (
-                  <Badge tone="danger">No streams</Badge>
-                ) : (
-                  <Badge>
-                    {ch.streams.length} stream{ch.streams.length === 1 ? '' : 's'}
-                  </Badge>
-                )}
               </Link>
+              {profile && (
+                <div className="px-3">
+                  <Toggle
+                    label={`In ${profile.name}`}
+                    checked={members.has(ch.id)}
+                    onChange={(enabled) =>
+                      setMembership.mutate(
+                        { profileId: profile.id, channelId: ch.id, enabled },
+                        { onError: (e) => toast(e.message, { tone: 'error' }) },
+                      )
+                    }
+                  />
+                </div>
+              )}
             </li>
           ))}
         </ul>

@@ -136,3 +136,10 @@ export interface Me {
   email?: string;
   user_level?: number;
 }
+
+export interface ChannelProfile {
+  id: number;
+  name: string;
+  /** IDs of the channels enabled in this profile */
+  channels: number[];
+}

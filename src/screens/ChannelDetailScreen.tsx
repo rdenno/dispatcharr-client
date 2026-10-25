@@ -11,15 +11,17 @@ import {
   useChannelStreams,
   useDeleteChannel,
   useGroups,
+  useSetProfileMembership,
   useStreamProfiles,
   useUpdateChannel,
 } from '../api/hooks';
+import { useSelectedProfile } from '../lib/useSelectedProfile';
 import type { Channel, Stream } from '../api/types';
 import { Player } from '../components/Player';
 import { StreamRow } from '../components/StreamRow';
 import { StreamPicker } from '../components/StreamPicker';
 import { useToast } from '../components/Toast';
-import { Button, Centered, Confirm, ErrorNote, Field, IconButton, Logo, Sheet, Spinner, TopBar } from '../components/ui';
+import { Button, Centered, Confirm, ErrorNote, Field, IconButton, Logo, Sheet, Spinner, Toggle, TopBar } from '../components/ui';
 
 type Preview = { url: string; title: string; streamId?: number };
 
@@ -33,6 +35,8 @@ export default function ChannelDetailScreen() {
   const changeLive = useChangeLiveStream();
   const toast = useToast();
 
+  const { profile, members } = useSelectedProfile();
+  const setMembership = useSetProfileMembership();
   const [preview, setPreview] = useState<Preview | null>(null);
   const [picking, setPicking] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -133,6 +137,28 @@ export default function ChannelDetailScreen() {
           >
             <Tv size={18} /> Watch
           </Button>
+        </div>
+      )}
+
+      {profile && (
+        <div className="flex items-center gap-3 border-b border-line px-3 py-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium">In {profile.name} profile</p>
+            <p className="text-xs text-muted">Outputs using this profile (HDHomeRun, M3U) include this channel</p>
+          </div>
+          <Toggle
+            label={`In ${profile.name}`}
+            checked={members.has(ch.id)}
+            onChange={(enabled) =>
+              setMembership.mutate(
+                { profileId: profile.id, channelId: ch.id, enabled },
+                {
+                  onSuccess: () => toast(enabled ? `Added to ${profile.name}` : `Removed from ${profile.name}`),
+                  onError: (e) => toast(e.message, { tone: 'error' }),
+                },
+              )
+            }
+          />
         </div>
       )}
 

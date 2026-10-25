@@ -3,6 +3,7 @@ import { api } from './client';
 import type {
   Channel,
   ChannelGroup,
+  ChannelProfile,
   EPGSource,
   M3UAccount,
   M3UProfile,
@@ -29,6 +30,7 @@ export const keys = {
   userAgents: ['user-agents'] as const,
   streamProfiles: ['stream-profiles'] as const,
   activity: ['activity'] as const,
+  profiles: ['channel-profiles'] as const,
 };
 
 export const logoUrl = (logoId: number | null | undefined) =>
@@ -186,6 +188,10 @@ export interface ActiveChannel {
   [key: string]: unknown;
 }
 
+export function useChannelProfiles() {
+  return useQuery({ queryKey: keys.profiles, queryFn: () => api<ChannelProfile[]>('/api/channels/profiles/') });
+}
+
 // --- Mutations ---
 
 export function useUpdateChannel() {
@@ -314,5 +320,38 @@ export function useChangeLiveStream() {
     mutationFn: ({ channelUuid, streamId }: { channelUuid: string; streamId: number }) =>
       api(`/proxy/ts/change_stream/${channelUuid}`, { method: 'POST', body: { stream_id: streamId } }),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.activity }),
+  });
+}
+
+/** Include or exclude a channel from a channel profile (what Plex/HDHR outputs see). */
+export function useSetProfileMembership() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ profileId, channelId, enabled }: { profileId: number; channelId: number; enabled: boolean }) =>
+      api(`/api/channels/profiles/${profileId}/channels/bulk-update/`, {
+        method: 'PATCH',
+        body: { channels: [{ channel_id: channelId, enabled }] },
+      }),
+    onMutate: async ({ profileId, channelId, enabled }) => {
+      await qc.cancelQueries({ queryKey: keys.profiles });
+      const previous = qc.getQueryData<ChannelProfile[]>(keys.profiles);
+      qc.setQueryData<ChannelProfile[]>(keys.profiles, (list) =>
+        list?.map((p) =>
+          p.id !== profileId
+            ? p
+            : {
+                ...p,
+                channels: enabled
+                  ? [...new Set([...p.channels, channelId])]
+                  : p.channels.filter((id) => id !== channelId),
+              },
+        ),
+      );
+      return { previous };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.previous) qc.setQueryData(keys.profiles, ctx.previous);
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: keys.profiles }),
   });
 }
