@@ -1,0 +1,8 @@
+{
+  "name": "Dispatcharr Web Client",
+  "description": "A web management and streaming client for Dispatcharr IPTV, featuring channel management, TV guide (EPG), DVR recording, M3U playlist & EPG syncing, VOD library, server monitoring, and live video streaming.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
