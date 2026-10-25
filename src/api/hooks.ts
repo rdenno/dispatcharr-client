@@ -18,7 +18,7 @@ const PAGE_SIZE = 50;
 export const keys = {
   me: ['me'] as const,
   version: ['version'] as const,
-  channels: (search: string, group: number | null) => ['channels', search, group] as const,
+  channels: (search: string, group: string | null) => ['channels', search, group] as const,
   channel: (id: number) => ['channel', id] as const,
   channelStreams: (id: number) => ['channel-streams', id] as const,
   streamSearch: (search: string, account: number | null) => ['stream-search', search, account] as const,
@@ -49,9 +49,11 @@ export function useVersion() {
   });
 }
 
-export function useChannels(search: string, group: number | null) {
+/** `group` is the group's name: Dispatcharr's channel_group filter matches names, not IDs. */
+export function useChannels(search: string, group: string | null, enabled = true) {
   return useInfiniteQuery({
     queryKey: keys.channels(search, group),
+    enabled,
     initialPageParam: 1,
     queryFn: ({ pageParam, signal }) =>
       api<Paginated<Channel>>('/api/channels/channels/', {

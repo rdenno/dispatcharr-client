@@ -8,7 +8,9 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="icon" type="image/png" href="/m/favicon-32.png" />
     <link rel="apple-touch-icon" href="/m/icon-192.png" />
-    <link rel="manifest" href="/m/manifest.webmanifest" />
+    <!-- use-credentials: without the Authelia cookie the manifest request gets the login page,
+         and Chrome falls back to a plain shortcut instead of installing the app -->
+    <link rel="manifest" href="/m/manifest.webmanifest" crossorigin="use-credentials" />
     <title>Dispatcharr</title>
   </head>
   <body>

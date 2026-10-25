@@ -18,6 +18,11 @@ const queryClient = new QueryClient({
   },
 });
 
+// Makes the app installable as a PWA; dev builds skip it so Vite's hot reload isn't cached
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/m/sw.js', { scope: '/m/' }).catch(() => {});
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>

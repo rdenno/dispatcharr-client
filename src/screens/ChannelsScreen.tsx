@@ -16,7 +16,9 @@ export default function ChannelsScreen() {
   const [creating, setCreating] = useState(false);
 
   const groups = useGroups();
-  const channels = useChannels(debouncedSearch, group);
+  const selectedGroupName = group !== null ? (groups.data?.find((g) => g.id === group)?.name ?? null) : null;
+  // Wait for the group list before filtering, or the first request would be unfiltered
+  const channels = useChannels(debouncedSearch, selectedGroupName, group === null || groups.isSuccess);
   const items = useMemo(() => channels.data?.pages.flatMap((p) => p.results) ?? [], [channels.data]);
   const total = channels.data?.pages[0]?.count;
   const groupName = useMemo(() => new Map((groups.data ?? []).map((g) => [g.id, g.name])), [groups.data]);
@@ -60,7 +62,7 @@ export default function ChannelsScreen() {
           />
         </div>
         {filterGroups.length > 0 && (
-          <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1">
+          <div className="-mx-3 flex gap-2 overflow-x-auto px-3 py-1">
             <Chip active={group === null} onClick={() => setParam('group', null)}>
               All
             </Chip>

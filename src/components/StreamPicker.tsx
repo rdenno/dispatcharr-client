@@ -59,7 +59,7 @@ export function StreamPicker({
           />
         </div>
         {accounts.length > 1 && (
-          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
+          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 py-1">
             {[{ id: null, name: 'All sources' } as const, ...accounts].map((a) => (
               <button
                 key={a.id ?? 'all'}
