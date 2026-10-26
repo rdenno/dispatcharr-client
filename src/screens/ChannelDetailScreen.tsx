@@ -11,6 +11,7 @@ import {
   useChannelStreams,
   useDeleteChannel,
   useGroups,
+  useHealth,
   useSetProfileMembership,
   useStreamProfiles,
   useUpdateChannel,
@@ -21,7 +22,7 @@ import { Player } from '../components/Player';
 import { StreamRow } from '../components/StreamRow';
 import { StreamPicker } from '../components/StreamPicker';
 import { useToast } from '../components/Toast';
-import { Button, Centered, Confirm, ErrorNote, Field, IconButton, Logo, Sheet, Spinner, Toggle, TopBar } from '../components/ui';
+import { Button, Centered, Confirm, ErrorNote, Field, IconButton, Logo, Sheet, Spinner, Toggle, TopBar, timeAgo } from '../components/ui';
 
 type Preview = { url: string; title: string; streamId?: number };
 
@@ -37,6 +38,7 @@ export default function ChannelDetailScreen() {
 
   const { profile, members } = useSelectedProfile();
   const setMembership = useSetProfileMembership();
+  const health = useHealth();
   const [preview, setPreview] = useState<Preview | null>(null);
   const [picking, setPicking] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -161,6 +163,16 @@ export default function ChannelDetailScreen() {
           />
         </div>
       )}
+
+      {(health.data?.actions ?? [])
+        .filter((a) => a.channel_id === ch.id && Date.now() / 1000 - a.at < 7 * 86400)
+        .slice(0, 2)
+        .map((a) => (
+          <p key={a.at} className="border-b border-line bg-accent/5 px-3 py-2 text-xs text-muted">
+            Health scanner {a.kind === 'added' ? 'added' : 'moved'} <span className="text-white">{a.stream_name}</span> (
+            {a.account}) to the top {timeAgo(new Date(a.at * 1000).toISOString())}: {a.reason}.
+          </p>
+        ))}
 
       <div className="flex items-center justify-between px-3 pt-4 pb-1">
         <h2 className="text-xs font-semibold tracking-wide text-muted uppercase">

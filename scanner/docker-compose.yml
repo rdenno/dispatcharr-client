@@ -1,0 +1,15 @@
+# Stream health scanner for Dispatcharr. Settings live in .env (see .env.example).
+services:
+  dispatcharr-health:
+    build: .
+    container_name: dispatcharr-health
+    restart: unless-stopped
+    env_file: .env
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    ports:
+      # The mobile UI reaches this through nginx (which adds SCANNER_TOKEN); requests without
+      # the token are refused.
+      - "9393:9393"
+    volumes:
+      - ./data:/data

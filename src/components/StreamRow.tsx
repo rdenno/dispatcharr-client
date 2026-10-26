@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import type { M3UAccount, Stream } from '../api/types';
+import { useHealth } from '../api/hooks';
+import type { M3UAccount, Stream, StreamHealth } from '../api/types';
 import { Badge, timeAgo } from './ui';
 
 /** Compact quality summary from Dispatcharr's last probe of the stream. */
@@ -46,9 +47,32 @@ export function StreamRow({
           {stream.is_stale && <Badge tone="warn">Stale</Badge>}
           {(stream.current_viewers ?? 0) > 0 && <Badge tone="accent">{stream.current_viewers} watching</Badge>}
         </div>
+        <HealthLine stream={stream} />
         {probed && <p className="mt-1 text-[11px] text-muted">Probed {probed}</p>}
       </div>
       <div className="flex shrink-0 items-center">{actions}</div>
+    </div>
+  );
+}
+
+const healthStyle: Record<StreamHealth['status'], { tone: 'accent' | 'warn' | 'danger'; label: string }> = {
+  ok: { tone: 'accent', label: 'Healthy' },
+  warn: { tone: 'warn', label: 'Warning' },
+  fail: { tone: 'danger', label: 'Failing' },
+};
+
+/** Result of the last health scan for this stream, if it has been scanned. */
+function HealthLine({ stream }: { stream: Stream }) {
+  const health = useHealth();
+  const h = health.data?.streams[String(stream.id)];
+  if (!h) return null;
+  const style = healthStyle[h.status];
+  const checked = timeAgo(new Date(h.checked_at * 1000).toISOString());
+  return (
+    <div className="mt-1 flex flex-wrap items-center gap-1 text-[11px]">
+      <Badge tone={style.tone}>{style.label}</Badge>
+      {h.issues.length > 0 && <span className={h.status === 'fail' ? 'text-danger' : 'text-warn'}>{h.issues.join(' · ')}</span>}
+      <span className="text-muted">scanned {checked}</span>
     </div>
   );
 }

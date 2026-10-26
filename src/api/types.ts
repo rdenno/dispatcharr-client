@@ -143,3 +143,52 @@ export interface ChannelProfile {
   /** IDs of the channels enabled in this profile */
   channels: number[];
 }
+
+// --- Stream health scanner (dispatcharr-client/scanner), served at /m/health/ ---
+
+export type HealthStatus = 'ok' | 'warn' | 'fail';
+
+export interface StreamHealth {
+  stream_id: number;
+  name: string;
+  account: string;
+  status: HealthStatus;
+  issues: string[];
+  metrics: { resolution?: string; fps?: number; kbps?: number; codec?: string };
+  checked_at: number;
+}
+
+export interface ChannelHealth {
+  channel_id: number;
+  name: string;
+  status: HealthStatus | 'busy' | 'unknown';
+  checked_at: number;
+}
+
+export interface HealthAction {
+  at: number;
+  channel_id: number;
+  channel_name: string;
+  kind: 'promoted' | 'added';
+  stream_id: number;
+  stream_name: string;
+  account: string;
+  reason: string;
+}
+
+export interface HealthResults {
+  status: {
+    running: boolean;
+    phase: string;
+    progress?: [number, number];
+    current_channel?: string | null;
+    started_at?: number;
+    finished_at?: number;
+    next_run?: number;
+    last_error?: string | null;
+  };
+  settings: { profile: string; interval_hours: number; auto_fix: boolean };
+  streams: Record<string, StreamHealth>;
+  channels: Record<string, ChannelHealth>;
+  actions: HealthAction[];
+}

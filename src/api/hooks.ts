@@ -4,6 +4,7 @@ import type {
   Channel,
   ChannelGroup,
   ChannelProfile,
+  HealthResults,
   EPGSource,
   M3UAccount,
   M3UProfile,
@@ -31,6 +32,7 @@ export const keys = {
   streamProfiles: ['stream-profiles'] as const,
   activity: ['activity'] as const,
   profiles: ['channel-profiles'] as const,
+  health: ['health'] as const,
 };
 
 export const logoUrl = (logoId: number | null | undefined) =>
@@ -353,5 +355,30 @@ export function useSetProfileMembership() {
       if (ctx?.previous) qc.setQueryData(keys.profiles, ctx.previous);
     },
     onSettled: () => qc.invalidateQueries({ queryKey: keys.profiles }),
+  });
+}
+
+/** Scanner results; `undefined` data (not an error) when the scanner isn't deployed. */
+export function useHealth() {
+  return useQuery({
+    queryKey: keys.health,
+    queryFn: async () => {
+      const res = await fetch('/m/health/results', { headers: { Accept: 'application/json' } });
+      if (!res.ok || !res.headers.get('content-type')?.includes('json')) return null;
+      return (await res.json()) as HealthResults;
+    },
+    retry: false,
+    refetchInterval: (q) => (q.state.data?.status.running ? 5000 : 60_000),
+  });
+}
+
+export function useStartScan() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (channelId?: number) => {
+      const res = await fetch(`/m/health/scan${channelId ? `?channel=${channelId}` : ''}`, { method: 'POST' });
+      if (!res.ok) throw new Error(res.status === 409 ? 'A scan is already running' : `Scanner error (${res.status})`);
+    },
+    onSuccess: () => setTimeout(() => qc.invalidateQueries({ queryKey: keys.health }), 1500),
   });
 }

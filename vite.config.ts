@@ -14,6 +14,12 @@ export default defineConfig({
     proxy: {
       '/api': { target: dispatcharr, changeOrigin: true },
       '/proxy': { target: dispatcharr, changeOrigin: true },
+      // Stream health scanner; nginx adds the token in production
+      '/m/health': {
+        target: process.env.SCANNER_URL ?? 'http://127.0.0.1:9393',
+        rewrite: (path) => path.replace(/^\/m\/health/, ''),
+        headers: { 'X-Scanner-Token': process.env.SCANNER_TOKEN ?? '' },
+      },
     },
   },
 });

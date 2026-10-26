@@ -4,6 +4,7 @@ import { api } from '../api/client';
 import type { Channel } from '../api/types';
 import { Square, UserX } from 'lucide-react';
 import { logoUrl, useActivity, useStopChannel, useStopClient, type ActiveChannel } from '../api/hooks';
+import { HealthPanel } from '../components/HealthPanel';
 import { useToast } from '../components/Toast';
 import { Badge, Centered, ErrorNote, IconButton, Logo, Spinner, TopBar } from '../components/ui';
 
@@ -29,6 +30,7 @@ export default function ActivityScreen() {
   return (
     <>
       <TopBar title="Activity" subtitle="Live channels · updates every 5s" />
+      <HealthPanel />
       {activity.isPending ? (
         <Centered>
           <Spinner />

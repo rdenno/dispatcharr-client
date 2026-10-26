@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { Plus, Search } from 'lucide-react';
 import clsx from 'clsx';
-import { logoUrl, useChannels, useCreateChannel, useGroups, useSetProfileMembership } from '../api/hooks';
+import { logoUrl, useChannels, useCreateChannel, useGroups, useHealth, useSetProfileMembership } from '../api/hooks';
 import { Badge, Button, Centered, ErrorNote, Field, Logo, Sheet, Spinner, Toggle, TopBar } from '../components/ui';
 import { useToast } from '../components/Toast';
 import { useDebounced, useOnVisible } from '../lib/useDebounced';
@@ -18,6 +18,7 @@ export default function ChannelsScreen() {
   const { profiles, profile, members, select: selectProfile } = useSelectedProfile();
   const setMembership = useSetProfileMembership();
   const toast = useToast();
+  const health = useHealth();
 
   const groups = useGroups();
   const selectedGroupName = group !== null ? (groups.data?.find((g) => g.id === group)?.name ?? null) : null;
@@ -119,7 +120,10 @@ export default function ChannelsScreen() {
                 <span className="w-10 shrink-0 text-right font-mono text-sm text-muted">{ch.channel_number ?? '–'}</span>
                 <Logo src={logoUrl(ch.logo_id)} alt={ch.name} />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{ch.name}</p>
+                  <p className="flex items-center gap-1.5 font-medium">
+                    <HealthDot status={health.data?.channels[String(ch.id)]?.status} />
+                    <span className="truncate">{ch.name}</span>
+                  </p>
                   <p className="flex items-center gap-1.5 truncate text-xs text-muted">
                     {ch.streams.length === 0 ? (
                       <Badge tone="danger">No streams</Badge>
@@ -231,5 +235,16 @@ function CreateChannelSheet({ open, onClose }: { open: boolean; onClose: () => v
         </Button>
       </div>
     </Sheet>
+  );
+}
+
+/** Red/amber dot when the last health scan found the channel failing or degraded. */
+function HealthDot({ status }: { status?: string }) {
+  if (status !== 'fail' && status !== 'warn') return null;
+  return (
+    <span
+      title={status === 'fail' ? 'Failing in the last health scan' : 'Warning in the last health scan'}
+      className={clsx('h-2 w-2 shrink-0 rounded-full', status === 'fail' ? 'bg-danger' : 'bg-warn')}
+    />
   );
 }
